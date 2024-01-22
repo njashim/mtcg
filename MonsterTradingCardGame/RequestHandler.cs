@@ -59,7 +59,7 @@ namespace MonsterTradingCardGame
             else if (this.request.StartsWith("POST /packages"))
             {
                 string body = GetLastLine(this.request);
-                List<string> cardIDs = GetCardIDsFromRequestBody(body);
+                List<string> cardIDs = GetCardIDsFromRequestBodyPackages(body);
                 if (GetTokenFromRequest(this.request).Equals(""))
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
@@ -134,6 +134,25 @@ namespace MonsterTradingCardGame
                     this.response = ResponseHandler.GetResponseMessage(200, "application/json", "The user has cards, the response contains these") + "\r\n" + userCardsToJSON + "\r\n";
                 }
             }
+            else if (this.request.StartsWith("GET /deck?format=plain"))
+            {
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                if (GetTokenFromRequest(this.request).Equals(""))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "text/plain", "Access token is missing or invalid");
+                }
+                else if ((db.GetDeckByUsername(username) == null) || (db.GetDeckByUsername(username).Count == 0))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(204, "text/plain", "The request was fine, but the deck doesn't have any cards");
+                }
+                else
+                {
+                    List<Card> userDeck = db.GetDeckByUsername(username);
+                    string userDeckToString = String.Join("\n", userDeck.Select(x => x.ToString()).ToArray());
+                    this.response = ResponseHandler.GetResponseMessage(200, "text/plain", "The deck has cards, the response contains these") + "\r\n" + userDeckToString + "\r\n";
+                }
+            }
             else if (this.request.StartsWith("GET /deck"))
             {
                 string token = GetTokenFromRequest(this.request);
@@ -148,9 +167,36 @@ namespace MonsterTradingCardGame
                 }
                 else
                 {
-                    List<Card> userDeck = db.GetCardsByUsername(username);
+                    List<Card> userDeck = db.GetDeckByUsername(username);
                     string userDeckToJSON = JsonSerializer.Serialize(userDeck, new JsonSerializerOptions { WriteIndented = true });
-                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "The user has cards, the response contains these") + "\r\n" + userDeckToJSON + "\r\n";
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "The deck has cards, the response contains these") + "\r\n" + userDeckToJSON + "\r\n";
+                }
+            }
+            else if (this.request.StartsWith("PUT /deck"))
+            {
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                string body = GetLastLine(this.request);
+                List<string> cardIDs = GetCardIDsFromRequestBodyDeck(body);
+                bool cardExists = cardIDs.Any(cardID => string.IsNullOrEmpty(cardID) || (db.CardExist(cardID) && db.UserHasCards(username, cardID)));
+                if (GetTokenFromRequest(this.request).Equals(""))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                } else if(db.UserExist(username) && cardExists)
+                {
+                    if(cardIDs.Count == 4)
+                    {
+                        db.AddCardsToUserDeck(username, cardIDs);
+                        this.response = ResponseHandler.GetResponseMessage(200, "application/json", "The deck has been successfully configured");
+                    }
+                    else
+                    {
+                        this.response = ResponseHandler.GetResponseMessage(400, "application/json", "The provided deck did not include the required amount of cards");
+                    }
+                }
+                else
+                {
+                    this.response = ResponseHandler.GetResponseMessage(403, "application/json", "At least one of the provided cards does not belong to the user or is not available.");
                 }
             }
             else if (this.request.StartsWith("GET /users/{username}"))
@@ -158,10 +204,6 @@ namespace MonsterTradingCardGame
                 // needs work
             }
             else if (this.request.StartsWith("PUT /users/{username}"))
-            {
-                // needs work
-            }
-            else if (this.request.StartsWith("PUT /deck"))
             {
                 // needs work
             }
@@ -224,16 +266,16 @@ namespace MonsterTradingCardGame
             return "";
         }
 
-        public List<string> GetCardIDsFromRequestBody(string requestBody)
+        public List<string> GetCardIDsFromRequestBodyPackages(string requestBody)
         {
             List<string> idValues = new List<string>();
 
             try
             {
-                // JSON-Array parsen
+                // JSON-Array parsing
                 JArray jsonArray = JArray.Parse(requestBody);
 
-                // Id-Werte extrahieren
+                // Id values extraction
                 foreach (var item in jsonArray)
                 {
                     string id = item["Id"]?.Value<string>();
@@ -245,7 +287,7 @@ namespace MonsterTradingCardGame
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Fehler beim Extrahieren der Id-Werte: {ex.Message}");
+                Console.WriteLine($"Error when extracting the ID values: {ex.Message}");
             }
 
             return idValues;
@@ -267,6 +309,33 @@ namespace MonsterTradingCardGame
                 // Token format is not as expected
                 return "";
             }
+        }
+
+        public List<string> GetCardIDsFromRequestBodyDeck(string requestBody)
+        {
+            List<string> idValues = new List<string>();
+
+            try
+            {
+                // JSON-Array parsing
+                JArray jsonArray = JArray.Parse(requestBody);
+
+                // Id values extraction
+                foreach (var item in jsonArray)
+                {
+                    string id = item?.Value<string>();
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        idValues.Add(id);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error when extracting the ID values: {ex.Message}");
+            }
+
+            return idValues;
         }
     }
 }

@@ -29,5 +29,10 @@ namespace MonsterTradingCardGame
             Monster,
             Spell
         }*/
+
+        public override string? ToString()
+        {
+            return $"ID: {ID}, Name: {Name}, Damage: {Damage}\n";
+        }
     }
 }

@@ -597,5 +597,83 @@ namespace MonsterTradingCardGame
             return userDeck;
         }
 
+        public bool UserHasCards(string username, string cardID)
+        {
+            bool hasCard = false;
+
+            // Query to check if the user has the specified card
+            this.query = "SELECT 1 FROM cards WHERE userID = (SELECT userID FROM users WHERE username = @username) AND cardID = @cardID LIMIT 1";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@cardID", cardID);
+
+                    // If a data set is found, ExecuteScalar() does not return null
+                    hasCard = (cmd.ExecuteScalar() != null);
+                }
+            }
+
+            return hasCard;
+        }
+
+        public void AddCardsToUserDeck(string username, List<string> cardIDs)
+        {
+            ClearUserDeck(username);
+            foreach (string cardID in cardIDs)
+            {
+                this.query = "INSERT INTO decks (userID, cardID) VALUES ((SELECT userID FROM users WHERE username = @username), @cardID)";
+
+                using (var connection = new NpgsqlConnection(connectionString))
+                {
+                    connection.Open();
+                    using (var cmd = new NpgsqlCommand(this.query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@username", username);
+                        cmd.Parameters.AddWithValue("@cardID", cardID);
+
+                        try
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Error: " + ex.Message);
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine($"Added {cardIDs.Count} cards to the deck for user '{username}'.");
+        }
+
+        private void ClearUserDeck(string username)
+        {
+            // Clear all cards from the user's deck
+            this.query = "DELETE FROM decks WHERE userID = (SELECT userID FROM users WHERE username = @username)";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+
+                    try
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error: " + ex.Message);
+                    }
+                }
+            }
+
+            Console.WriteLine($"Cleared the deck for user '{username}'.");
+        }
     }
 }
