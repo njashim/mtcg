@@ -58,12 +58,16 @@ namespace MonsterTradingCardGame
                 CREATE TABLE IF NOT EXISTS users (
                     userID SERIAL PRIMARY KEY,
                     username VARCHAR(255) UNIQUE NOT NULL,
+                    name VARCHAR(255),
                     password VARCHAR(255) NOT NULL, 
                     coins INTEGER DEFAULT 20 NOT NULL,
                     elo INTEGER DEFAULT 100 NOT NULL,
                     image VARCHAR(255),
                     bio VARCHAR(255),
-                    gamesPlayed INTEGER DEFAULT 0 NOT NULL
+                    gamesPlayed INTEGER DEFAULT 0 NOT NULL,
+                    wins INTEGER DEFAULT 0 NOT NULL,
+                    draws INTEGER DEFAULT 0 NOT NULL,
+                    losses INTEGER DEFAULT 0 NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS usersessions (
@@ -248,6 +252,24 @@ namespace MonsterTradingCardGame
                     return cmd.ExecuteScalar() as string;
                 }
             }
+        }
+
+        public bool TokenExist(string token)
+        {
+            bool exists = false;
+            this.query = "SELECT 1 FROM usersessions WHERE token = @token LIMIT 1";
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@token", token);
+
+                    exists = (cmd.ExecuteScalar() != null);
+                }
+                connection.Close();
+            }
+            return exists;
         }
 
         public int CreatePack()
@@ -674,6 +696,135 @@ namespace MonsterTradingCardGame
             }
 
             Console.WriteLine($"Cleared the deck for user '{username}'.");
+        }
+
+        public User GetUserDataByUsername(string username)
+        {
+            User userData = null;
+
+            // Query to retrieve user data based on the provided username
+            this.query = "SELECT name, bio, image FROM users WHERE username = @username";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            userData = new User
+                            {
+                                Name = reader["name"].ToString(),
+                                Bio = reader["bio"].ToString(),
+                                Image = reader["image"].ToString()
+                            };
+                        }
+                    }
+                }
+            }
+
+            return userData;
+        }
+
+        public void UpdateUserDataByUsername(string username, string newName, string newBio, string newImage)
+        {
+            // Query to update user data (bio and image) based on the provided username
+            this.query = "UPDATE users SET name = @newName, bio = @newBio, image = @newImage WHERE username = @username";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@newName", newName);
+                    cmd.Parameters.AddWithValue("@newBio", newBio);
+                    cmd.Parameters.AddWithValue("@newImage", newImage);
+                    cmd.Parameters.AddWithValue("@username", username);
+
+                    try
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error: " + ex.Message);
+                    }
+                }
+            }
+        }
+
+        public User GetStatsByUsername(string username)
+        {
+            User userStats = null;
+
+            // Query to retrieve user statistics based on the provided username
+            this.query = "SELECT name, elo, gamesPlayed, wins, draws, losses FROM users WHERE username = @username";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            userStats = new User
+                            {
+                                Name = reader["name"].ToString(),
+                                Elo = Convert.ToInt32(reader["elo"]),
+                                GamesPlayed = Convert.ToInt32(reader["gamesPlayed"]),
+                                Wins = Convert.ToInt32(reader["wins"]),
+                                Draws = Convert.ToInt32(reader["draws"]),
+                                Losses = Convert.ToInt32(reader["losses"])
+                            };
+                        }
+                    }
+                }
+            }
+
+            return userStats;
+        }
+
+        public List<User> GetScoreboard()
+        {
+            List<User> scoreboard = new List<User>();
+
+            // Query to retrieve user statistics ordered by ELO
+            this.query = "SELECT name, elo, gamesPlayed, wins, draws, losses FROM users ORDER BY elo DESC";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            User userStats = new User
+                            {
+                                Name = reader["name"].ToString(),
+                                Elo = Convert.ToInt32(reader["elo"]),
+                                GamesPlayed = Convert.ToInt32(reader["gamesPlayed"]),
+                                Wins = Convert.ToInt32(reader["wins"]),
+                                Draws = Convert.ToInt32(reader["draws"]),
+                                Losses = Convert.ToInt32(reader["losses"])
+                            };
+
+                            scoreboard.Add(userStats);
+                        }
+                    }
+                }
+            }
+
+            return scoreboard;
         }
     }
 }

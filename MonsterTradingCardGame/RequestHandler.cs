@@ -29,7 +29,7 @@ namespace MonsterTradingCardGame
         {
             if (this.request.StartsWith("POST /users"))
             {
-                string body = GetLastLine(this.request);
+                string body = GetLastLineFromRequest(this.request);
                 dynamic? user = JsonConvert.DeserializeObject(body);
                 if (db.UserExist((string)user.Username) == true)
                 {
@@ -43,7 +43,7 @@ namespace MonsterTradingCardGame
             }
             else if (this.request.StartsWith("POST /sessions"))
             {
-                string body = GetLastLine(this.request);
+                string body = GetLastLineFromRequest(this.request);
                 dynamic? user = JsonConvert.DeserializeObject(body);
                 if ((db.UserExist((string)user.Username) == true) && (db.LoginUser((string)user.Username, (string)user.Password) == true))
                 {
@@ -58,9 +58,10 @@ namespace MonsterTradingCardGame
             }
             else if (this.request.StartsWith("POST /packages"))
             {
-                string body = GetLastLine(this.request);
+                string body = GetLastLineFromRequest(this.request);
                 List<string> cardIDs = GetCardIDsFromRequestBodyPackages(body);
-                if (GetTokenFromRequest(this.request).Equals(""))
+                string token = GetTokenFromRequest(this.request);
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
                 } else if (db.GetTokenByUsername("admin").Equals(GetTokenFromRequest(this.request)))
@@ -97,7 +98,7 @@ namespace MonsterTradingCardGame
             {
                 string token = GetTokenFromRequest(this.request);
                 string username = GetUsernameFromToken(token);
-                if (GetTokenFromRequest(this.request).Equals(""))
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
                 }
@@ -119,7 +120,7 @@ namespace MonsterTradingCardGame
             {
                 string token = GetTokenFromRequest(this.request);
                 string username = GetUsernameFromToken(token);
-                if (GetTokenFromRequest(this.request).Equals(""))
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
                 }
@@ -138,7 +139,7 @@ namespace MonsterTradingCardGame
             {
                 string token = GetTokenFromRequest(this.request);
                 string username = GetUsernameFromToken(token);
-                if (GetTokenFromRequest(this.request).Equals(""))
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "text/plain", "Access token is missing or invalid");
                 }
@@ -157,7 +158,7 @@ namespace MonsterTradingCardGame
             {
                 string token = GetTokenFromRequest(this.request);
                 string username = GetUsernameFromToken(token);
-                if (GetTokenFromRequest(this.request).Equals(""))
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
                 }
@@ -176,10 +177,10 @@ namespace MonsterTradingCardGame
             {
                 string token = GetTokenFromRequest(this.request);
                 string username = GetUsernameFromToken(token);
-                string body = GetLastLine(this.request);
+                string body = GetLastLineFromRequest(this.request);
                 List<string> cardIDs = GetCardIDsFromRequestBodyDeck(body);
                 bool cardExists = cardIDs.Any(cardID => string.IsNullOrEmpty(cardID) || (db.CardExist(cardID) && db.UserHasCards(username, cardID)));
-                if (GetTokenFromRequest(this.request).Equals(""))
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
                 } else if(db.UserExist(username) && cardExists)
@@ -199,21 +200,101 @@ namespace MonsterTradingCardGame
                     this.response = ResponseHandler.GetResponseMessage(403, "application/json", "At least one of the provided cards does not belong to the user or is not available.");
                 }
             }
-            else if (this.request.StartsWith("GET /users/{username}"))
+            else if (this.request.StartsWith("GET /users/"))
             {
-                // needs work
+                string username = GetUsernameFromRequest(this.request);
+                string token = GetTokenFromRequest(this.request);
+                if(db.UserExist(username) == false)
+                {
+                    this.response = ResponseHandler.GetResponseMessage(404, "application/json", "User not found.");
+                }
+                else if ((token.Equals("")) || (db.TokenExist(token) == false) || (username.Equals(GetUsernameFromToken(token)) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                } 
+                else
+                {
+                    User userData = db.GetUserDataByUsername(username);
+                    // Create an anonymous type with the desired properties
+                    var userDataSerializationModel = new
+                    {
+                        Name = userData.Name,
+                        Bio = userData.Bio,
+                        Image = userData.Image
+                    };
+                    string userDataToJson = JsonSerializer.Serialize(userDataSerializationModel, new JsonSerializerOptions { WriteIndented = true });
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "Data successfully retrieved") + "\r\n" + userDataToJson + "\r\n";
+                }
             }
-            else if (this.request.StartsWith("PUT /users/{username}"))
+            else if (this.request.StartsWith("PUT /users/"))
             {
-                // needs work
+                string username = GetUsernameFromRequest(this.request);
+                string token = GetTokenFromRequest(this.request);
+                if (db.UserExist(username) == false)
+                {
+                    this.response = ResponseHandler.GetResponseMessage(404, "application/json", "User not found.");
+                }
+                else if ((token.Equals("")) || (db.TokenExist(token) == false) || (username.Equals(GetUsernameFromToken(token)) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                else
+                {
+                    string body = GetLastLineFromRequest(this.request);
+                    dynamic? user = JsonConvert.DeserializeObject(body);
+                    db.UpdateUserDataByUsername(username, (string)user.Name, (string)user.Bio, (string)user.Image);
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "User sucessfully updated.");
+                }
             }
             else if (this.request.StartsWith("GET /stats"))
             {
-                // needs work
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                else
+                {
+                    User userStats = db.GetStatsByUsername(username);
+                    // Create an anonymous type with the desired properties
+                    var userStatsSerializationModel = new
+                    {
+                        Name = userStats.Name,
+                        Elo = userStats.Elo,
+                        GamesPlayed = userStats.GamesPlayed,
+                        Wins = userStats.Wins,
+                        Draws = userStats.Draws,
+                        Losses = userStats.Losses
+                    };
+                    string userStatsToJSON = JsonSerializer.Serialize(userStatsSerializationModel, new JsonSerializerOptions { WriteIndented = true });
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "The stats could be retrieved successfully.") + "\r\n" + userStatsToJSON + "\r\n";
+                }
             }
             else if (this.request.StartsWith("GET /scoreboard"))
             {
-                // needs work
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                else
+                {
+                    List<User> scoreboard = db.GetScoreboard();
+                    // Creating a list of anonymous objects for serialization
+                    var scoreboardSerializationModel = scoreboard.Select(user => new
+                    {
+                        Name = user.Name,
+                        Elo = user.Elo,
+                        GamesPlayed = user.GamesPlayed,
+                        Wins = user.Wins,
+                        Draws = user.Draws,
+                        Losses = user.Losses
+                    }).ToList();
+                    string scoreboardToJSON = JsonSerializer.Serialize(scoreboardSerializationModel, new JsonSerializerOptions { WriteIndented = true });
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "The scoreboard could be retrieved successfully.") + "\r\n" + scoreboardToJSON + "\r\n";
+                }
             }
             else if (this.request.StartsWith("POST /battles"))
             {
@@ -241,7 +322,7 @@ namespace MonsterTradingCardGame
             }
         }
 
-        public string GetLastLine(string request)
+        private string GetLastLineFromRequest(string request)
         {
             if (string.IsNullOrEmpty(request))
             {
@@ -252,7 +333,7 @@ namespace MonsterTradingCardGame
             return lines.LastOrDefault()?.Trim() ?? string.Empty;
         }
 
-        public string GetTokenFromRequest(string request)
+        private string GetTokenFromRequest(string request)
         {
             // Find the Authorization header in the cURL request
             Match match = Regex.Match(request, @"Authorization:\s+Bearer\s+([^\s]+)");
@@ -266,7 +347,7 @@ namespace MonsterTradingCardGame
             return "";
         }
 
-        public List<string> GetCardIDsFromRequestBodyPackages(string requestBody)
+        private List<string> GetCardIDsFromRequestBodyPackages(string requestBody)
         {
             List<string> idValues = new List<string>();
 
@@ -293,7 +374,7 @@ namespace MonsterTradingCardGame
             return idValues;
         }
 
-        public string GetUsernameFromToken(string token)
+        private string GetUsernameFromToken(string token)
         {
             const string tokenSuffix = "-mtcgToken";
 
@@ -311,7 +392,7 @@ namespace MonsterTradingCardGame
             }
         }
 
-        public List<string> GetCardIDsFromRequestBodyDeck(string requestBody)
+        private List<string> GetCardIDsFromRequestBodyDeck(string requestBody)
         {
             List<string> idValues = new List<string>();
 
@@ -336,6 +417,20 @@ namespace MonsterTradingCardGame
             }
 
             return idValues;
+        }
+
+        private string GetUsernameFromRequest(string request)
+        {
+            // Assuming the format is "/users/{username}"
+            string[] segments = request.Split('/');
+            if (segments.Length >= 3 && (segments[1] == "users" || segments[1] == "tradings"))
+            {
+                return segments[2].Split(" ")[0];
+            }
+            else
+            {
+                return "";
+            }
         }
     }
 }
