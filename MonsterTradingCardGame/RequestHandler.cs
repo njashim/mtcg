@@ -302,7 +302,20 @@ namespace MonsterTradingCardGame
             }
             else if (this.request.StartsWith("GET /tradings"))
             {
-                // needs work 
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                else if()
+                {
+
+                }
+                else
+                {
+
+                }
             }
             else if (this.request.StartsWith("POST /tradings"))
             {
@@ -356,7 +369,7 @@ namespace MonsterTradingCardGame
                 // JSON-Array parsing
                 JArray jsonArray = JArray.Parse(requestBody);
 
-                // Id values extraction
+                // ID values extraction
                 foreach (var item in jsonArray)
                 {
                     string id = item["Id"]?.Value<string>();
@@ -401,7 +414,7 @@ namespace MonsterTradingCardGame
                 // JSON-Array parsing
                 JArray jsonArray = JArray.Parse(requestBody);
 
-                // Id values extraction
+                // ID values extraction
                 foreach (var item in jsonArray)
                 {
                     string id = item?.Value<string>();

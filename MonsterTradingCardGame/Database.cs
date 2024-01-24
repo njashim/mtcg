@@ -103,15 +103,13 @@ namespace MonsterTradingCardGame
                 );
 
                 CREATE TABLE IF NOT EXISTS tradings (
-                    tradeID SERIAL PRIMARY KEY,
+                    tradeID VARCHAR(255) PRIMARY KEY,
                     traderID INTEGER,
-                    receiverID INTEGER,
-                    tradercardID VARCHAR(255),
-                    receivercardID VARCHAR(255),
+                    cardToTradeID VARCHAR(255),
+                	type VARCHAR(50),
+                	minimumDamage DECIMAL,
                     FOREIGN KEY (traderID) REFERENCES users(userID),
-                    FOREIGN KEY (receiverID) REFERENCES users(userID),
-                    FOREIGN KEY (tradercardID) REFERENCES cards(cardID),
-                    FOREIGN KEY (receivercardID) REFERENCES cards(cardID)
+                    FOREIGN KEY (cardToTradeID) REFERENCES cards(cardID)
                 );
                 """;
             using (var connection = new NpgsqlConnection(connectionString))
