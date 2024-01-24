@@ -824,5 +824,106 @@ namespace MonsterTradingCardGame
 
             return scoreboard;
         }
+
+        public List<Trading> GetTrades()
+        {
+            List<Trading> trades = new List<Trading>();
+
+            // Query to retrieve trading information from the tradings table
+            this.query = "SELECT tradeID, traderID, cardToTradeID, type, minimumDamage FROM tradings";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            Trading trade = new Trading
+                            {
+                                ID = reader["tradeID"].ToString(),
+                                CardToTrade = reader["cardToTradeID"].ToString(),
+                                Type = reader["type"].ToString(),
+                                MinimumDamage = Convert.ToDecimal(reader["minimumDamage"]),
+                            };
+
+                            trades.Add(trade);
+                        }
+                    }
+                }
+            }
+
+            return trades;
+        }
+
+        public bool CardInDeck(string username, string cardID)
+        {
+            // Query to check if the card is in the user's deck
+            this.query = "SELECT 1 FROM decks WHERE userID = (SELECT userID FROM users WHERE username = @username) AND cardID = @cardID LIMIT 1";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@cardID", cardID);
+
+                    // If a data set is found, ExecuteScalar() does not return null
+                    return (cmd.ExecuteScalar() != null);
+                }
+            }
+        }
+
+        public bool TradeExist(string tradeID)
+        {
+            // Query to check if the trade with the given ID exists
+            this.query = "SELECT 1 FROM tradings WHERE tradeID = @tradeID LIMIT 1";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@tradeID", tradeID);
+
+                    // If a data set is found, ExecuteScalar() does not return null
+                    return (cmd.ExecuteScalar() != null);
+                }
+            }
+        }
+
+        public void CreateTrade(string tradeID, string username, string cardID, string type, string minDamage)
+        {
+            // Query to insert a new trade record into the tradings table
+            this.query = "INSERT INTO tradings (tradeID, traderID, cardToTradeID, type, minimumDamage) " +
+                         "VALUES (@tradeID, (SELECT userID FROM users WHERE username = @username), " +
+                         "(SELECT cardID FROM cards WHERE cardID = @cardID), @type, @minDamage)";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@tradeID", tradeID);
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@cardID", cardID);
+                    cmd.Parameters.AddWithValue("@type", type);
+                    cmd.Parameters.AddWithValue("@minDamage", Convert.ToDecimal(minDamage)); // Assuming minDamage is a decimal
+
+                    try
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error: " + ex.Message);
+                    }
+                }
+            }
+        }
+
     }
 }

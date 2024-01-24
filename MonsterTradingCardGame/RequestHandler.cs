@@ -308,18 +308,48 @@ namespace MonsterTradingCardGame
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
                 }
-                else if()
+                else if((db.GetTrades() == null) || (db.GetTrades().Count == 0))
                 {
-
+                    this.response = ResponseHandler.GetResponseMessage(204, "application/json", "The request was fine, but there are no trading deals available");
                 }
                 else
                 {
-
+                    List<Trading> trades = db.GetTrades();
+                    // Creating a list of anonymous objects for serialization
+                    var tradesSerializationModel = trades.Select(trade => new
+                    {
+                        ID = trade.ID,
+                        CardToTrade = trade.CardToTrade,
+                        Type = trade.Type,
+                        MinimumDamage = trade.MinimumDamage
+                    }).ToList();
+                    string tradesToJSON = JsonSerializer.Serialize(tradesSerializationModel, new JsonSerializerOptions { WriteIndented = true });
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "There are trading deals available, the response contains these") + "\r\n" + tradesToJSON + "\r\n";
                 }
             }
             else if (this.request.StartsWith("POST /tradings"))
             {
-                // needs work
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                string body = GetLastLineFromRequest(this.request);
+                dynamic? trade = JsonConvert.DeserializeObject(body);
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                else if((db.UserHasCards(username, (string)trade.CardToTrade) == false) || (db.CardInDeck(username, (string)trade.CardToTrade)))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(403, "application/json", "The deal contains a card that is not owned by the user or locked in the deck.");
+                }
+                else if(db.TradeExist((string)trade.Id))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(409, "application/json", "A deal with this deal ID already exists.");
+                }
+                else
+                {
+                    db.CreateTrade((string)trade.Id, username, (string)trade.CardToTrade, (string)trade.Type, (string)trade.MinimumDamage);
+                    this.response = ResponseHandler.GetResponseMessage(201, "application/json", "Trading deal successfully created");
+                }
             }
             else if (this.request.StartsWith("DELETE /tradings/{tradingdealid}"))
             {
