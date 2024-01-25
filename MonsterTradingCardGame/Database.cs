@@ -109,6 +109,7 @@ namespace MonsterTradingCardGame
                     cardToTradeID VARCHAR(255),
                 	type VARCHAR(50),
                 	minimumDamage DECIMAL,
+                    isClosed BOOLEAN,
                     FOREIGN KEY (traderID) REFERENCES users(userID),
                     FOREIGN KEY (cardToTradeID) REFERENCES cards(cardID)
                 );
@@ -831,7 +832,7 @@ namespace MonsterTradingCardGame
             List<Trading> trades = new List<Trading>();
 
             // Query to retrieve trading information from the tradings table
-            this.query = "SELECT tradeID, traderID, cardToTradeID, type, minimumDamage FROM tradings";
+            this.query = "SELECT tradeID, traderID, cardToTradeID, type, minimumDamage FROM tradings WHERE isClosed = false";
 
             using (var connection = new NpgsqlConnection(connectionString))
             {
@@ -878,10 +879,10 @@ namespace MonsterTradingCardGame
             }
         }
 
-        public bool TradeExist(string tradeID)
+        public bool OpenTradeExist(string tradeID)
         {
             // Query to check if the trade with the given ID exists
-            this.query = "SELECT 1 FROM tradings WHERE tradeID = @tradeID LIMIT 1";
+            this.query = "SELECT 1 FROM tradings WHERE tradeID = @tradeID AND isClosed = false LIMIT 1";
 
             using (var connection = new NpgsqlConnection(connectionString))
             {
@@ -899,9 +900,9 @@ namespace MonsterTradingCardGame
         public void CreateTrade(string tradeID, string username, string cardID, string type, string minDamage)
         {
             // Query to insert a new trade record into the tradings table
-            this.query = "INSERT INTO tradings (tradeID, traderID, cardToTradeID, type, minimumDamage) " +
+            this.query = "INSERT INTO tradings (tradeID, traderID, cardToTradeID, type, minimumDamage, isClosed) " +
                          "VALUES (@tradeID, (SELECT userID FROM users WHERE username = @username), " +
-                         "(SELECT cardID FROM cards WHERE cardID = @cardID), @type, @minDamage)";
+                         "(SELECT cardID FROM cards WHERE cardID = @cardID), @type, @minDamage, false)";
 
             using (var connection = new NpgsqlConnection(connectionString))
             {
@@ -950,31 +951,156 @@ namespace MonsterTradingCardGame
             }
         }
 
-        public string GetCardIDByTradeID(string tradeID)
+        public Trading GetTradeByTradingID(string tradeID)
         {
-            string cardID = null;
+            Trading trade = null;
 
-            // Query to retrieve the card ID associated with the provided trade ID
-            string query = "SELECT cardToTradeID FROM tradings WHERE tradeID = @tradeID";
+            // Query to retrieve a trading deal based on the provided tradeID
+            this.query = "SELECT * FROM tradings WHERE tradeID = @tradeID";
 
             using (var connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
-                using (var cmd = new NpgsqlCommand(query, connection))
+                using (var cmd = new NpgsqlCommand(this.query, connection))
                 {
                     cmd.Parameters.AddWithValue("@tradeID", tradeID);
 
-                    // ExecuteScalar is used to retrieve a single value (cardToTradeID in this case)
-                    object result = cmd.ExecuteScalar();
-
-                    if (result != null)
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        cardID = result.ToString();
+                        if (reader.Read())
+                        {
+                            trade = new Trading
+                            {
+                                ID = tradeID,
+                                TraderID = Convert.ToInt32(reader["traderID"]),
+                                CardToTrade = reader["cardToTradeID"].ToString(),
+                                Type = reader["type"].ToString(),
+                                MinimumDamage = Convert.ToDecimal(reader["minimumDamage"]),
+                                IsClosed = Convert.ToBoolean(reader["isClosed"])
+                            };
+                        }
                     }
                 }
             }
 
-            return cardID;
+            return trade;
+        }
+
+        public string GetUsernameByUserID(int userID)
+        {
+            string username = null;
+
+            // Query to retrieve the username based on the provided userID
+            this.query = "SELECT username FROM users WHERE userID = @userID";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@userID", userID);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            username = reader["username"].ToString();
+                        }
+                    }
+                }
+            }
+
+            return username;
+        }
+
+        public Card GetCardByUsernameAndCardID(string username, string cardID)
+        {
+            Card card = null;
+
+            // Query to retrieve the card based on the provided username and cardID
+            this.query = "SELECT * FROM cards WHERE userID = (SELECT userID FROM users WHERE username = @username) AND cardID = @cardID";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@cardID", cardID);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            card = new Card
+                            {
+                                ID = reader["cardID"].ToString(),
+                                Name = reader["name"].ToString(),
+                                Damage = Convert.ToDecimal(reader["damage"]),
+                                Element = reader["element"].ToString(),
+                                Type = reader["type"].ToString(),
+                                UserID = Convert.ToInt32(reader["userID"]),
+                                PackID = Convert.ToInt32(reader["packID"])
+                            };
+                        }
+                    }
+                }
+            }
+
+            return card;
+        }
+
+        public void TradeCards(string tradeID, string traderUsername, string username, string cardToTradeID, string cardFromUserID)
+        {
+            // Perform the trading operation by updating the userIDs for the cards
+            this.query = "UPDATE cards SET userID = (SELECT userID FROM users WHERE username = @traderUsername) WHERE cardID = @cardFromUserID;" +
+                          "UPDATE cards SET userID = (SELECT userID FROM users WHERE username = @username) WHERE cardID = @cardToTradeID;";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@traderUsername", traderUsername);
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@cardToTradeID", cardToTradeID);
+                    cmd.Parameters.AddWithValue("@cardFromUserID", cardFromUserID);
+
+                    try
+                    {
+                        cmd.ExecuteNonQuery();
+                        SetTradingAsClosed(tradeID);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error: " + ex.Message);
+                    }
+                }
+            }
+        }
+
+        private void SetTradingAsClosed(string tradeID)
+        {
+            // Update the trading deal to set it as closed
+            this.query = "UPDATE tradings SET isClosed = true WHERE tradeID = @tradeID";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@tradeID", tradeID);
+
+                    try
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error: " + ex.Message);
+                    }
+                }
+            }
         }
 
         public void SetTimestampByUsername(string username)

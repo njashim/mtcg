@@ -327,6 +327,38 @@ namespace MonsterTradingCardGame
                     this.response = ResponseHandler.GetResponseMessage(200, "application/json", "There are trading deals available, the response contains these") + "\r\n" + tradesToJSON + "\r\n";
                 }
             }
+            else if (this.request.StartsWith("POST /tradings/"))
+            {
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                string tradeID = GetTradingIDFromRequest(this.request);
+                string body = GetLastLineFromRequest(this.request);
+                string cardIDFromBody = GetCardIDFromRequestBodyTradings(body);
+
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                else if (db.OpenTradeExist(tradeID) == false)
+                {
+                    this.response = ResponseHandler.GetResponseMessage(404, "application/json", "The provided deal ID was not found.");
+                }
+                else
+                {
+                    Trading trade = db.GetTradeByTradingID(tradeID);
+                    string traderUsername = db.GetUsernameByUserID(trade.TraderID);
+                    Card card = db.GetCardByUsernameAndCardID(username, cardIDFromBody);
+                    if ((db.UserHasCards(username, trade.CardToTrade)) || (db.UserHasCards(traderUsername, cardIDFromBody)) || ((trade.Type.Equals(card.Type)) && (trade.MinimumDamage >= card.Damage)) || (db.CardInDeck(traderUsername, trade.CardToTrade)))
+                    {
+                        this.response = ResponseHandler.GetResponseMessage(403, "application/json", "The offered card is owned by the user, or the requirements are not met (Type, MinimumDamage), or the offered card is locked in the deck.");
+                    }
+                    else
+                    {
+                        db.TradeCards(tradeID, traderUsername, username, trade.CardToTrade, cardIDFromBody);
+                        this.response = ResponseHandler.GetResponseMessage(200, "application/json", "Trading deal successfully executed.");
+                    }
+                }
+            }
             else if (this.request.StartsWith("POST /tradings"))
             {
                 string token = GetTokenFromRequest(this.request);
@@ -341,7 +373,7 @@ namespace MonsterTradingCardGame
                 {
                     this.response = ResponseHandler.GetResponseMessage(403, "application/json", "The deal contains a card that is not owned by the user or locked in the deck.");
                 }
-                else if(db.TradeExist((string)trade.Id))
+                else if(db.OpenTradeExist((string)trade.Id))
                 {
                     this.response = ResponseHandler.GetResponseMessage(409, "application/json", "A deal with this deal ID already exists.");
                 }
@@ -356,15 +388,16 @@ namespace MonsterTradingCardGame
                 string token = GetTokenFromRequest(this.request);
                 string username = GetUsernameFromToken(token);
                 string tradeID = GetTradingIDFromRequest(this.request);
+                Trading trade = db.GetTradeByTradingID(tradeID);
                 if ((token.Equals("")) || (db.TokenExist(token) == false))
                 {
                     this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
                 }
-                else if (db.TradeExist(tradeID) == false)
+                else if (db.OpenTradeExist(tradeID) == false)
                 {
                     this.response = ResponseHandler.GetResponseMessage(404, "application/json", "The provided deal ID was not found.");
                 }
-                else if (db.UserHasCards(username, db.GetCardIDByTradeID(tradeID)) == false)
+                else if (db.UserHasCards(username, trade.CardToTrade) == false)
                 {
                     this.response = ResponseHandler.GetResponseMessage(403, "application/json", "The deal contains a card that is not owned by the user.");
                 }
@@ -372,30 +405,6 @@ namespace MonsterTradingCardGame
                 {
                     db.DeleteTradeByID(tradeID);
                     this.response = ResponseHandler.GetResponseMessage(200, "application/json", "Trading deal successfully deleted");
-                }
-            }
-            else if (this.request.StartsWith("POST /tradings/"))
-            {
-                string token = GetTokenFromRequest(this.request);
-                string username = GetUsernameFromToken(token);
-                string tradeID = GetTradingIDFromRequest(this.request);
-                if ((token.Equals("")) || (db.TokenExist(token) == false))
-                {
-                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
-                }
-                else if (db.TradeExist(tradeID) == false)
-                {
-                    this.response = ResponseHandler.GetResponseMessage(404, "application/json", "The provided deal ID was not found.");
-                }
-                else if((db.UserHasCards(username, db.GetCardIDByTradeID(tradeID))) || )
-                {
-                    // TODO finish if statement
-                    this.response = ResponseHandler.GetResponseMessage(403, "application/json", "The offered card is not owned by the user, or the requirements are not met (Type, MinimumDamage), or the offered card is locked in the deck.");
-                }
-                else
-                {
-                    // TODO finish trading process
-                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "Trading deal successfully executed.");
                 }
             }
             else if(this.request.StartsWith("POST /daily-login"))
@@ -532,5 +541,27 @@ namespace MonsterTradingCardGame
                 return "";
             }
         }
+
+        private string GetCardIDFromRequestBodyTradings(string requestBody)
+        {
+            try
+            {
+                // Assuming the request body is a single card ID enclosed in double quotes
+                string cardID = JsonConvert.DeserializeObject<string>(requestBody);
+
+                // Check if the extracted card ID is not null or empty
+                if (!string.IsNullOrEmpty(cardID))
+                {
+                    return cardID;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error when extracting the card ID: {ex.Message}");
+            }
+
+            return "";
+        }
+
     }
 }
