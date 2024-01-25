@@ -351,17 +351,56 @@ namespace MonsterTradingCardGame
                     this.response = ResponseHandler.GetResponseMessage(201, "application/json", "Trading deal successfully created");
                 }
             }
-            else if (this.request.StartsWith("DELETE /tradings/{tradingdealid}"))
+            else if (this.request.StartsWith("DELETE /tradings/"))
             {
-                // needs work
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                string tradeID = GetTradingIDFromRequest(this.request);
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                else if (db.TradeExist(tradeID) == false)
+                {
+                    this.response = ResponseHandler.GetResponseMessage(404, "application/json", "The provided deal ID was not found.");
+                }
+                else if (db.UserHasCards(username, db.GetCardIDByTradeID(tradeID)) == false)
+                {
+                    this.response = ResponseHandler.GetResponseMessage(403, "application/json", "The deal contains a card that is not owned by the user.");
+                }
+                else
+                {
+                    db.DeleteTradeByID(tradeID);
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "Trading deal successfully deleted");
+                }
             }
-            else if (this.request.StartsWith("POST /tradings/{tradingdealid}"))
+            else if (this.request.StartsWith("POST /tradings/"))
             {
-                // needs work
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                string tradeID = GetTradingIDFromRequest(this.request);
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                else if (db.TradeExist(tradeID) == false)
+                {
+                    this.response = ResponseHandler.GetResponseMessage(404, "application/json", "The provided deal ID was not found.");
+                }
+                else if((db.UserHasCards(username, db.GetCardIDByTradeID(tradeID))) || )
+                {
+                    // TODO finish if statement
+                    this.response = ResponseHandler.GetResponseMessage(403, "application/json", "The offered card is not owned by the user, or the requirements are not met (Type, MinimumDamage), or the offered card is locked in the deck.");
+                }
+                else
+                {
+                    // TODO finish trading process
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "Trading deal successfully executed.");
+                }
             }
             else
             {
-                // needs work
+                this.response = ResponseHandler.GetResponseMessage(400, "application/json", "Command not found");
             }
         }
 
@@ -467,6 +506,20 @@ namespace MonsterTradingCardGame
             // Assuming the format is "/users/{username}"
             string[] segments = request.Split('/');
             if (segments.Length >= 3 && (segments[1] == "users" || segments[1] == "tradings"))
+            {
+                return segments[2].Split(" ")[0];
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        private string GetTradingIDFromRequest(string request)
+        {
+            // Assuming the format is "/tradings/{tradeID}"
+            string[] segments = request.Split('/');
+            if (segments.Length >= 3 && segments[1] == "tradings")
             {
                 return segments[2].Split(" ")[0];
             }

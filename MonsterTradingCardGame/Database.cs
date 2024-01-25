@@ -925,5 +925,56 @@ namespace MonsterTradingCardGame
             }
         }
 
+        public void DeleteTradeByID(string tradeID)
+        {
+            // Query to delete a trade record from the tradings table based on tradeID
+            this.query = "DELETE FROM tradings WHERE tradeID = @tradeID";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@tradeID", tradeID);
+
+                    try
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error: " + ex.Message);
+                    }
+                }
+            }
+        }
+
+        public string GetCardIDByTradeID(string tradeID)
+        {
+            string cardID = null;
+
+            // Query to retrieve the card ID associated with the provided trade ID
+            string query = "SELECT cardToTradeID FROM tradings WHERE tradeID = @tradeID";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@tradeID", tradeID);
+
+                    // ExecuteScalar is used to retrieve a single value (cardToTradeID in this case)
+                    object result = cmd.ExecuteScalar();
+
+                    if (result != null)
+                    {
+                        cardID = result.ToString();
+                    }
+                }
+            }
+
+            return cardID;
+        }
+
     }
 }
