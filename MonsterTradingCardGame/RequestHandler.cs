@@ -17,6 +17,7 @@ namespace MonsterTradingCardGame
         public string request { get; private set; }
         public string response { get; private set; }
         public Database db { get; private set; }
+        static int streakCounter = 1;
 
         public RequestHandler(string Request, Database db)
         {
@@ -409,7 +410,37 @@ namespace MonsterTradingCardGame
             }
             else if(this.request.StartsWith("POST /daily-login"))
             {
-
+                string token = GetTokenFromRequest(this.request);
+                string username = GetUsernameFromToken(token);
+                int coins = 5;
+                DateTime currentTimestamp = db.GetTimestampByUsername(username);
+                if ((token.Equals("")) || (db.TokenExist(token) == false))
+                {
+                    this.response = ResponseHandler.GetResponseMessage(401, "application/json", "Access token is missing or invalid");
+                }
+                // else if (DateTime.UtcNow.Subtract(currentTimestamp).TotalHours < 24)
+                else if (DateTime.UtcNow.Subtract(currentTimestamp).TotalMinutes < 1)
+                {
+                    this.response = ResponseHandler.GetResponseMessage(400, "application/json", "Daily Login Bonus not available yet");
+                }
+                else
+                {
+                    // if(DateTime.UtcNow.Subtract(currentTimestamp).TotalHours > 48)
+                    if (DateTime.UtcNow.Subtract(currentTimestamp).TotalMinutes > 2)
+                    {
+                        streakCounter = 1;
+                        coins = 5;
+                    }
+                    else
+                    {
+                        streakCounter++;
+                        coins = 5 * streakCounter;
+                    }
+                    db.SetTimestampByUsername(username);
+                    int newCoins = db.GetCoinsByUsername(username) + coins;
+                    db.UpdateUserCoins(username, newCoins);
+                    this.response = ResponseHandler.GetResponseMessage(200, "application/json", "Daily Login Bonus has been successfully retrieved") + "\r\n" + "You retrieved " + coins + " coins for your " + streakCounter + "d Streak. Now you have " + newCoins + " coins in total" + "\r\n";
+                }
             }
             else
             {

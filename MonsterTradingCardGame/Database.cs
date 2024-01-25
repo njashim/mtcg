@@ -68,7 +68,7 @@ namespace MonsterTradingCardGame
                     wins INTEGER DEFAULT 0 NOT NULL,
                     draws INTEGER DEFAULT 0 NOT NULL,
                     losses INTEGER DEFAULT 0 NOT NULL,
-                	last_login TIMESTAMP
+                	lastLogin TIMESTAMP
                 );
 
                 CREATE TABLE IF NOT EXISTS usersessions (
@@ -500,7 +500,7 @@ namespace MonsterTradingCardGame
             }
         }
 
-        private void UpdateUserCoins(string username, int updatedCoins)
+        public void UpdateUserCoins(string username, int updatedCoins)
         {
             // Query to update the coins for the specified username
             this.query = "UPDATE users SET coins = @updatedCoins WHERE username = @username";
@@ -1105,7 +1105,7 @@ namespace MonsterTradingCardGame
 
         public void SetTimestampByUsername(string username)
         {
-            this.query = "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE username = @username";
+            this.query = "UPDATE users SET lastLogin = CURRENT_TIMESTAMP WHERE username = @username";
 
             using (var connection = new NpgsqlConnection(connectionString))
             {
@@ -1126,11 +1126,11 @@ namespace MonsterTradingCardGame
             }
         }
 
-        public TimeSpan GetTimestampByUsername(string username)
+        public DateTime GetTimestampByUsername(string username)
         {
-            TimeSpan timestamp = TimeSpan.MinValue;
+            DateTime timestamp = DateTime.MinValue;
 
-            this.query = "SELECT EXTRACT(EPOCH FROM last_login) FROM users WHERE username = @username";
+            this.query = "SELECT lastLogin FROM users WHERE username = @username";
 
             using (var connection = new NpgsqlConnection(connectionString))
             {
@@ -1142,8 +1142,7 @@ namespace MonsterTradingCardGame
                     object result = cmd.ExecuteScalar();
                     if (result != null && result != DBNull.Value)
                     {
-                        double seconds = Convert.ToDouble(result);
-                        timestamp = TimeSpan.FromSeconds(seconds);
+                        timestamp = Convert.ToDateTime(result);
                     }
                 }
             }
