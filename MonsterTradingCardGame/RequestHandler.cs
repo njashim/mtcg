@@ -398,6 +398,10 @@ namespace MonsterTradingCardGame
                     this.response = ResponseHandler.GetResponseMessage(200, "application/json", "Trading deal successfully executed.");
                 }
             }
+            else if(this.request.StartsWith("POST /daily-login"))
+            {
+
+            }
             else
             {
                 this.response = ResponseHandler.GetResponseMessage(400, "application/json", "Command not found");
