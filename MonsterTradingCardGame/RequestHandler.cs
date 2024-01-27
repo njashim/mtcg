@@ -425,7 +425,7 @@ namespace MonsterTradingCardGame
                 }
                 else
                 {
-                    // if(DateTime.UtcNow.Subtract(currentTimestamp).TotalHours > 48)
+                    // if (DateTime.UtcNow.Subtract(currentTimestamp).TotalHours > 48)
                     if (DateTime.UtcNow.Subtract(currentTimestamp).TotalMinutes > 2)
                     {
                         streakCounter = 1;
