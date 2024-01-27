@@ -23,9 +23,6 @@ namespace MonsterTradingCardGame
         public int Draws { get; set; }
         public int Losses { get; set; }
 
-        //public List<Card> Stack { get; set; } = new List<Card>();
-        //public List<Card> Deck { get; set; } = new List<Card>();
-
         /*public User(string username, string password)
         {
             Username = username;
