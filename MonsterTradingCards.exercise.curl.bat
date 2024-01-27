@@ -280,7 +280,7 @@ echo after 24hours
 timeout /t 61 /nobreak
 curl -i -X POST http://localhost:10001/daily-login --header "Authorization: Bearer kienboec-mtcgToken"
 echo.
-echo should fail ... after 48hours - streak restart
+echo after 48hours - streak restart
 timeout /t 121 /nobreak
 curl -i -X POST http://localhost:10001/daily-login --header "Authorization: Bearer kienboec-mtcgToken"
 echo.
