@@ -85,14 +85,50 @@ namespace MonsterTradingCardGame
             if (cardA.Name == "WaterGoblin" && cardB.Name == "FireTroll")
             {
                 log += $"Troll defeats Goblin\n";
-                playerB.Deck.Remove(cardB);
-                playerA.Deck.Add(cardB);
+                playerA.Deck.Remove(cardA);
+                playerB.Deck.Add(cardA);
             }
             else if (cardB.Name == "WaterGoblin" && cardA.Name == "FireTroll")
             {
                 log += $"Troll defeats Goblin\n";
+                playerB.Deck.Remove(cardB);
+                playerA.Deck.Add(cardB);
+            } 
+            else if (cardA.Name.ToLower().Contains("goblin") && cardB.Name.ToLower().Contains("dragon"))
+            {
+                log += $"Goblins are too afraid of Dragons to attack.\n";
                 playerA.Deck.Remove(cardA);
                 playerB.Deck.Add(cardA);
+            }
+            else if (cardB.Name.ToLower().Contains("goblin") && cardA.Name.ToLower().Contains("dragon"))
+            {
+                log += $"Goblins are too afraid of Dragons to attack.\n";
+                playerB.Deck.Remove(cardB);
+                playerA.Deck.Add(cardB);
+            }
+            else if (cardA.Name.ToLower().Contains("ork") && cardB.Name.ToLower().Contains("wizzard"))
+            {
+                log += $"Wizzard can control Orks so they are not able to damage them.\n";
+                playerA.Deck.Remove(cardA);
+                playerB.Deck.Add(cardA);
+            }
+            else if (cardB.Name.ToLower().Contains("ork") && cardA.Name.ToLower().Contains("wizzard"))
+            {
+                log += $"Wizzard can control Orks so they are not able to damage them.\n";
+                playerB.Deck.Remove(cardB);
+                playerA.Deck.Add(cardB);
+            }
+            else if (cardA.Name.ToLower().Contains("dragon") && cardB.Name.ToLower().Contains("fireelve"))
+            {
+                log += $"The FireElves know Dragons since they were little and can evade their attacks.\n";
+                playerA.Deck.Remove(cardA);
+                playerB.Deck.Add(cardA);
+            }
+            else if (cardB.Name.ToLower().Contains("dragon") && cardA.Name.ToLower().Contains("fireelve"))
+            {
+                log += $"The FireElves know Dragons since they were little and can evade their attacks.\n";
+                playerB.Deck.Remove(cardB);
+                playerA.Deck.Add(cardB);
             }
             else
             {
@@ -132,11 +168,15 @@ namespace MonsterTradingCardGame
                 log += $"{damageA} VS {damageB} -> ";
                 if (damageA > damageB)
                 {
-                    log += $"{damageA / 2} VS {damageB / 2} => Draw (no action)\n";
+                    log += $"{damageA / 2} VS {damageB / 2} => {cardA.Name} wins\n";
+                    playerB.Deck.Remove(cardB);
+                    playerA.Deck.Add(cardB);
                 }
                 else if (damageB > damageA)
                 {
-                    log += $"{damageA / 2} VS {damageB / 2} => Draw (no action)\n";
+                    log += $"{damageA / 2} VS {damageB / 2} => {cardB.Name} wins\n";
+                    playerA.Deck.Remove(cardA);
+                    playerB.Deck.Add(cardA);
                 }
                 else
                 {
@@ -188,6 +228,30 @@ namespace MonsterTradingCardGame
             else if (cardA.Name == "RegularSpell" && cardB.Name == "WaterGoblin")
             {
                 log += $"{cardA.Damage} vs {cardB.Damage} -> {cardA.Damage * 2} vs {cardB.Damage / 2} => {cardA.Name} wins\n";
+                playerB.Deck.Remove(cardB);
+                playerA.Deck.Add(cardB);
+            }
+            else if (cardA.Name.ToLower().Contains("knight") && cardB.Name.ToLower().Contains("waterspell"))
+            {
+                log += $"The armor of Knights is so heavy that WaterSpells make them drown them instantly.\n";
+                playerA.Deck.Remove(cardA);
+                playerB.Deck.Add(cardA);
+            }
+            else if (cardB.Name.ToLower().Contains("knight") && cardA.Name.ToLower().Contains("waterspell"))
+            {
+                log += $"The armor of Knights is so heavy that WaterSpells make them drown them instantly.\n";
+                playerB.Deck.Remove(cardB);
+                playerA.Deck.Add(cardB);
+            }
+            else if (cardA.Name.ToLower().Contains("spell") && cardB.Name.ToLower().Contains("kraken"))
+            {
+                log += $"The Kraken is immune against spells.\n";
+                playerA.Deck.Remove(cardA);
+                playerB.Deck.Add(cardA);
+            }
+            else if (cardB.Name.ToLower().Contains("spell") && cardA.Name.ToLower().Contains("kraken"))
+            {
+                log += $"The Kraken is immune against spells.\n";
                 playerB.Deck.Remove(cardB);
                 playerA.Deck.Add(cardB);
             }

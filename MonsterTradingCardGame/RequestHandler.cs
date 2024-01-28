@@ -315,8 +315,21 @@ namespace MonsterTradingCardGame
                 {
                     Player player1 = new Player(this.Client1, username1, Database.GetDeckByUsername(username1));
                     Battle battle = new Battle(player1, Database);
-                    await Task.Run(() => WaitForNextClient(battle));
-                    this.Response += ResponseHandler.GetResponseMessage(200, "application/json", "The battle has been carried out successfully.") + "\r\n" + battle.Log + "\r\n";
+                    // thread safe
+                    lock (battle)
+                    {
+                        WaitForNextClient(battle);
+                        // because await doesn't work in lock I did a manual await with the while and if
+                        while (battle.Log == null || battle.Log == String.Empty)
+                        {
+                            if (true)
+                            {
+
+                            }
+                        }
+                    }
+
+                    this.Response = ResponseHandler.GetResponseMessage(200, "application/json", "The battle has been carried out successfully.") + "\r\n" + battle.Log + "\r\n";
                 }
             }
             else if (this.Request.StartsWith("GET /tradings"))
@@ -643,14 +656,14 @@ namespace MonsterTradingCardGame
                             Player player2 = new Player(this.Client1, username2, Database.GetDeckByUsername(username2));
                             battle.AddPlayer(player2);
                             battle.StartBattle();
-                            this.Response += ResponseHandler.GetResponseMessage(200, "application/json", "The battle has been carried out successfully.") + "\r\n" + battle.Log + "\r\n";
+                            this.Response = ResponseHandler.GetResponseMessage(200, "application/json", "The battle has been carried out successfully.") + "\r\n" + battle.Log + "\r\n";
                         }
 
                         Console.WriteLine($"Sending response:\r\n{this.Response}");
 
                         byte[] responseData = Encoding.UTF8.GetBytes(this.Response);
                         await networkStream.WriteAsync(responseData, 0, responseData.Length);
-                        await networkStream.FlushAsync();
+                        //await networkStream.FlushAsync();
                     }
                     catch (IOException e)
                     {
