@@ -8,7 +8,8 @@ GitHub-Repository: https://github.com/njashim/mtcg
 I didn't really use any design pattern or something like that. I just started coding and tried to keep my code simple as possible. First I started with the code of my Server-Client without enabling Multi-Threading. Then I wrote the code for the Response- & Request-Handler.
 I designed my `ResponseHandler.cs` class so that I have a dictionary with the status codes & their description and a method `string GetResponseMessage(int statusCode, string contentType, string customMessage)`. I give my method the respective parameters and get my response message back.
 My `RequestHandler.cs` is constructed so that it gets the request and the Database object from the `Program.cs` which is responsible for Server-Client and then searches for the respective curl command in my if-else statements.
-And the last thing is my `Database.cs` class which is responsible for everything related to the database. For example database connection, creating anything, deleting anything, updating anything.
+Another class is my `Database.cs` which is responsible for everything related to the database. For example database connection, creating anything, deleting anything, updating anything.
+There is also my `Battle.cs` class which is responsible for the battle logic, battle log and the ELO calculation.
 
 ## lessons learned
 
@@ -31,4 +32,4 @@ daily login bonus
 
 ## tracked time
 
-in total I worked 68 hours on this project
+in total I worked 78 hours on this project
