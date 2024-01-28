@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace MonsterTradingCardGame
 {
@@ -32,6 +33,18 @@ namespace MonsterTradingCardGame
             Monster,
             Spell
         }*/
+
+        public bool IsMonster()
+        {
+            if (Type.Equals("Monster"))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
         public override string? ToString()
         {

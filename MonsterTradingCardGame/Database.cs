@@ -792,6 +792,35 @@ namespace MonsterTradingCardGame
             return userStats;
         }
 
+        public void UpdateUserStatsByUsername(string username, int newElo, int newGamesPlayed, int newWins, int newDraws ,int newLosses)
+        {
+            // Query to update user data (bio and image) based on the provided username
+            this.query = "UPDATE users SET elo = @newElo, gamesPlayed = @newGamesPlayed, wins = @newWins, draws = @newDraws, losses = @newLosses WHERE username = @username";
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var cmd = new NpgsqlCommand(this.query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@newElo", newElo);
+                    cmd.Parameters.AddWithValue("@newGamesPlayed", newGamesPlayed);
+                    cmd.Parameters.AddWithValue("@newWins", newWins);
+                    cmd.Parameters.AddWithValue("@newDraws", newDraws);
+                    cmd.Parameters.AddWithValue("@newLosses", newLosses);
+                    cmd.Parameters.AddWithValue("@username", username);
+
+                    try
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error: " + ex.Message);
+                    }
+                }
+            }
+        }
+
         public List<User> GetScoreboard()
         {
             List<User> scoreboard = new List<User>();
